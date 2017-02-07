@@ -25,7 +25,36 @@ class Redis::Cursor {
     }
 }
 
+class Redis::PubSub {
+    has Eredis::Reader $.reader handles<cmd release>;
 
+    method new(*@args, :$reader) {
+        $reader.clear;
+        my $self = self.bless(reader => $reader);
+        $self.cmd(|@args);
+        return $self;
+    }
+
+    method message() {
+        $!reader.reply_blocking.value
+    }
+
+    method subscribe(*@channels) {
+        $!reader.cmd('SUBSCRIBE', @channels.map({ .Str }).flat).value
+    }
+
+    method unsubscribe(*@channels) {
+        $!reader.cmd('UNSUBSCRIBE', @channels.map({ .Str }).flat).value
+    }
+
+    method psubscribe(*@patterns) {
+        $!reader.cmd('PSUBSCRIBE', @patterns.map({ .Str }).flat).value
+    }
+
+    method punsubscribe(*@patterns) {
+        $!reader.cmd('PUNSUBSCRIBE', @patterns.map({ .Str }).flat).value
+    }
+}
 
 class Redis::Async {
     has Eredis $.eredis handles <host_add host_file retry
@@ -384,6 +413,23 @@ class Redis::Async {
         self.cmd('PING').value;
     }
 
+    method psubscribe(*@patterns) {
+        Redis::PubSub.new('PSUBSCRIBE', |@patterns,
+                          reader => $!eredis.reader)
+    }
+
+    method pttl($key, :$pipeline) {
+        self.command('PTTL', $key, :$pipeline)
+    }
+
+    method publish($channel, $message, :$async, :$pipeline) {
+        self.command('PUBLISH', $channel, $message, :$async, :$pipeline)
+    }
+
+    method quit() {
+	self.cmd('QUIT').value
+    }
+
     method randomkey($key, :$pipeline) {
         self.command('RANDOMKEY', $key, :$pipeline)
     }
@@ -412,18 +458,6 @@ class Redis::Async {
         self.command('RPUSHX', $key, $value, :$async, :$pipeline)
     }
 
-    method ttl($key, :$pipeline) {
-        self.command('TTL', $key, :$pipeline)
-    }
-
-    method pttl($key, :$pipeline) {
-        self.command('PTTL', $key, :$pipeline)
-    }
-
-    method quit() {
-	self.cmd('QUIT').value
-    }
-    
 #    method restore($key, Str $value, Int $pttl = 0, :$replace = False,
 #        :$async, :$pipeline) {
 #        my @args = 'RESTORE', $key, $pttl, $value;
@@ -542,12 +576,21 @@ class Redis::Async {
         self.command('STRLEN', $key, :$pipeline)
     }
 
+    method subscribe(*@channels) {
+        Redis::PubSub.new('SUBSCRIBE', |@channels,
+                          reader => $!eredis.reader)
+    }
+
     method swapdb(Int $db1, Int $db2) {
 	self.cmd("SWAPDB $db1 $db2").value
     }
 
     method time() {
         self.cmd("TIME").value
+    }
+
+    method ttl($key, :$pipeline) {
+        self.command('TTL', $key, :$pipeline)
     }
 
     method type($key, Bool :$pipeline) {
