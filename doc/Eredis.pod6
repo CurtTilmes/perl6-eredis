@@ -1,0 +1,16 @@
+=head1 NAME
+
+Eredis - NativeCall bindings for the Eulerian Technologies eredis library
+
+=head1 SYNOPSIS
+
+ use Eredis;
+
+ my $e = Eredis.new('localhost:6379');
+
+=head1 DESCRIPTION
+
+=head1 SEE ALSO
+
+Eredis can be obtained from 
+L<https://github.com/EulerianTechnologies/eredis>.

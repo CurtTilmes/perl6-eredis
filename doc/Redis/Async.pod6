@@ -1,0 +1,23 @@
+=head1 NAME
+
+Redis::Async
+
+=head1 SYNOPSIS
+
+ use Redis::Async;
+
+ my $r = Redis::Async.new("localhost:6379");
+
+ $r.set('foo', 'bar');
+
+ say $r.get('foo'); 
+
+ $r.finish;
+
+=head1 DESCRIPTION
+
+=head1 METHODS
+
+=head2 Redis::Async.new(@servers);
+
+@servers is a list of "host:port" servers.
