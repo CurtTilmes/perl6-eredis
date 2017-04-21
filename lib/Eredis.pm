@@ -35,6 +35,7 @@ class Eredis::Reply is repr('CStruct') {
     has size_t $.len;
     has Str $.str;
     has size_t $.elements;
+    has CArray[Pointer] $.element;
 
     sub eredis_reply_dump(Eredis::Reply)
         is native(LIBEREDIS) { * }
@@ -64,9 +65,9 @@ class Eredis::Reply is repr('CStruct') {
                 return $!str;
             }
             when REDIS_REPLY_ARRAY {
-                return do for 0 ..^ $.elements {
-                    eredis_reply_element(self, $_).value;
-                }
+                do for 0..^ $!elements {
+                    nativecast(Eredis::Reply, $!element[$_]).value;
+                };
             }
             when REDIS_REPLY_INTEGER {
                 return $!integer;
