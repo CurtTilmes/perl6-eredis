@@ -414,8 +414,7 @@ class Redis::Async {
     }
 
     method psubscribe(*@patterns) {
-        Redis::PubSub.new('PSUBSCRIBE', |@patterns,
-                          reader => $!eredis.reader)
+        Redis::PubSub.new('PSUBSCRIBE', |@patterns, reader => $!eredis.reader)
     }
 
     method pttl($key, :$pipeline) {
@@ -577,8 +576,7 @@ class Redis::Async {
     }
 
     method subscribe(*@channels) {
-        Redis::PubSub.new('SUBSCRIBE', |@channels,
-                          reader => $!eredis.reader)
+        Redis::PubSub.new('SUBSCRIBE', |@channels, reader => $!eredis.reader)
     }
 
     method swapdb(Int $db1, Int $db2) {

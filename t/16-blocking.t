@@ -40,8 +40,9 @@ for 1..5 -> $val {
 
 start {
     for 1..5 -> $val {
-        is-deeply $r.brpop('mylist2', 10),
-                  ('mylist2', $val.Str), "Got Value on list2 $val";
+        my $res = $r.brpop('mylist2', 10);
+        sleep .01;
+        is-deeply $res, ('mylist2', $val.Str), "Got Value on list2 $val";
     }
 }
 
