@@ -39,13 +39,13 @@ sleep .1;
 for 1..5 {
     is $r.publish('foo', $_), 1, "Publish foo $_";
     is $r.publish('bar', $_), 1, "Publish bar $_";
-    sleep .05;
+    sleep .1;
 }
 
 for 6..10 {
     is $r.publish('foo', $_), 1, "Publish foo $_";
     is $r.publish('bar', $_), 0, "Publish bar $_";
-    sleep .05;
+    sleep .1;
 }
 
 start {
@@ -66,18 +66,18 @@ start {
     $pub.release;
 }
 
-sleep .1;
+sleep .2;
 
 for 1..5 {
     is $r.publish('foo', $_), 1, "Publish foo $_";
     is $r.publish('bar', $_), 1, "Publish bar $_";
-    sleep .05;
+    sleep .1;
 }
 
 for 6..10 {
     is $r.publish('foo', $_), 1, "Publish foo $_";
     is $r.publish('bar', $_), 0, "Publish bar $_";
-    sleep .05;
+    sleep .1;
 }
 
 done-testing;

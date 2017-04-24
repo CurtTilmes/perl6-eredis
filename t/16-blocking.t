@@ -23,7 +23,7 @@ start {
 
 for 1..5 -> $val {
     ok $r.lpush('mylist', $val), "Push Value $val";
-    sleep .1;
+    sleep .2;
 }
 
 start {
@@ -35,13 +35,13 @@ start {
 
 for 1..5 -> $val {
     ok $r.rpush('mylist', $val), "Push Value $val";
-    sleep .1;
+    sleep .2;
 }
 
 start {
     for 1..5 -> $val {
         my $res = $r.brpop('mylist2', 10);
-        sleep .01;
+        sleep .1;
         is-deeply $res, ('mylist2', $val.Str), "Got Value on list2 $val";
     }
 }
@@ -55,7 +55,7 @@ start {
 
 for 1..5 -> $val {
     ok $r.lpush('mylist', $val), "Pushing $val onto first list";
-    sleep .1;
+    sleep .2;
 }
 
 done-testing;
