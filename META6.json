@@ -1,0 +1,31 @@
+{
+    "name" : "Redis::Async",
+
+    "version" : "0.5",
+
+    "source-url" : "https://github.com/CurtTilmes/perl6-eredis.git",
+
+    "perl" : "6.c",
+    
+    "tags" : [ "Redis" ],
+
+    "provides" : {
+        "Eredis" : "lib/Eredis.pm",
+        "Redis::Async" : "lib/Redis/Async.pm",
+    },
+
+    "depends" : [ ],
+
+    "description" : "Perl6 bindings for eredis",
+
+    "test-depends" : [ "Test" ],
+
+    "license" : "NASA-1.3",
+
+    "authors" : [ "Curt Tilmes <Curt.Tilmes@nasa.gov>" ],
+
+    "support" : { 
+      "source" : "https://github.com/CurtTilmes/perl6-eredis.git",
+      "bugtracker" : "https://github.com/CurtTilmes/Perl6-GraphQL/issues"
+    }
+}
