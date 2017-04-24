@@ -1,3 +1,5 @@
+=begin pod
+
 =head1 NAME
 
 Eredis - NativeCall bindings for the Eulerian Technologies eredis library
@@ -6,11 +8,229 @@ Eredis - NativeCall bindings for the Eulerian Technologies eredis library
 
  use Eredis;
 
- my $e = Eredis.new('localhost:6379');
+ my $e = Eredis.new;
+
+ $e.host_add('localhost', 6379); # Add a redis targer, first is 'preferred'
+
+ $e.host_file('my-hosts.conf');  # one line per host:port
+
+ $e.timeout(200);                # Set timeout - default 5000ms, 5 seconds
+
+ $e.max-readers(50);             # Set max readers - Default 10
+
+ $e.retry(1);                    # Set retry for reader - default 1
+
+ start $e.run_thr;               # Start eredis managed thread for async writes
+
+ my $r = $e.reader;              # Create a reader object
+
+ $r.cmd('set foo bar');          # Blocking write
+
+ my $reply = $r.cmd('get foo');  # Blocking read
+
+ say $reply.value;               # 'bar'
+
+ $r.append_cmd('set foo bar');   # Add pipe-lined read
+
+ my $reply = $r.reply;           # Get reply from pipe-lined read
+
+ $r.release;                     # Release reader
+
+ $e.write('set foo bar');        # Non-blocking write, no reply
+
+ $e.shutdown;                    # Shut down the event loop
+
+ $e.free;                        # Close connections and free memory
 
 =head1 DESCRIPTION
+
+Nativecall interface to the Eulerian Technologis eredis library: 
+
+    Eredis is a C client library built over Hiredis. It is
+    lightweight, high performance, reentrant and thread-safe.  It aims
+    to provide features for real production environment and keep it
+    simple.
+
+There are three main classes that correspond with C pointers to
+objects that get passed into C functions that operate on those
+objects.  They are implemented with three Perl 6 classes with methods
+that correspond to those C functions.
+
+=head2 class B<Eredis> is repr('CPointer')
+
+A Nativecall C<eredis_t> pointer.
+
+=item method B<new>()
+
+C<eredis_new>.
+
+=item method B<host_add>(Str:D $host, Int:D $port)
+
+C<eredis_host_add>
+
+throws X::Eredis on error
+
+=item method B<host_file>(Str:D $filename) returns Int
+
+C<eredis_host_file> returns number of hosts, or -1 on error
+
+=item method B<timeout>(Int:D $timeout-ms)
+
+C<eredis_timeout>.
+
+Default is 5000 (5 seconds).
+
+=item method B<max-readers>(Int:D $max-readers)
+
+C<eredis_r_max>
+
+Default is 10
+
+=item method B<retry>(Int:D $retry)
+
+C<eredis_r_retry>
+
+Default is 1 retry.
+
+=item method B<reader>()
+
+C<eredis_r>
+
+Returns an Eredis::Reader
+
+=item method B<run>()
+
+C<eredis_run>
+
+run eredis event loop (for writes) in blocking mode
+
+The loop will be stopped by a call to 'shutdown' or 'free'.
+
+=item method B<run_thr>()
+
+C<eredis_run_thr>
+
+run eredis event loop (for writes) in a dedicated thread
+
+Will block until the thread is ready.
+
+=item multi method B<write>(Str:D $cmd)
+
+C<eredis_w_cmd>
+
+=item multi method B<write>(*@args)
+
+C<eredis_w_cmdargv>
+
+=item method B<write_pending>() returns Int
+
+C<eredis_w_pending>
+
+write queue pending commands
+
+=item method B<write-wait>()
+
+Busy loop until write queue is empty
+
+=item method B<shutdown>()
+
+C<eredis_shutdown>
+
+Shutdown the write event loop
+
+=item method B<free>()
+
+Stop eredis and free all resources allocated.
+
+=head2 class B<Eredis::Reader> is repr('CPointer')
+
+Wrapper for a C<struct eredis_reader_t> object.
+
+Created by C<Eredis.reader()>
+
+=item multi method B<cmd>(Str:D $cmd) returns Eredis::Reply
+
+C<eredis_r_cmd>
+
+Blocking read request.
+
+=item multi method B<cmd>(*@args) returns Eredis::Reply
+
+C<eredis_r_cmdargv>
+
+Blocking read request
+
+=item multi method B<append_cmd>(Str:D $cmd)
+
+C<eredis_r_append_cmd>
+
+Pipelining read request
+
+=item multi method B<append_cmd>(*@args)
+
+C<eredis_r_append_cmdargv>
+
+Pipelining read request
+
+=item method B<reply>() returns Eredis::Reply
+
+C<eredis_r_reply>
+
+Retrieve reply from a pipelined request
+
+=item method B<reply_blocking>() returns Eredis::Reply
+
+C<eredis_r_reply_blocking>
+
+Blocking read a reply (for pub/sub)
+
+=item method B<reply_detach>() returns Eredis::Reply
+
+C<eredis_r_reply_detach>
+
+Returns a detached reply that must be manually free-d.
+
+=item method B<clear>()
+
+C<eredis_r_clear>
+
+Clear any pending pipelined replies without retrieving them.
+
+=item method B<release>()
+
+C<eredis_r_release>
+
+Release a reader.
+
+=head2 class B<Eredis::Reply> is repr('CPointer')
+
+Wrapper for a C<eredis_reply_t> pointer.
+
+=item B<dump>()
+
+C<eredis_reply_dump>
+
+Diagnostic dump of a reply to STDOUT
+
+=item B<free>()
+
+C<eredis_reply_free>
+
+Free a detached Eredis::Reply.  Most of the time this isn't needed.
+
+=item B<type>() returns REDIS_REPLY
+
+One of:
+REDIS_REPLY_STRING REDIS_REPLY_ARRAY REDIS_REPLY_INTEGER
+REDIS_REPLY_NIL REDIS_REPLY_STATUS REDIS_REPLY_ERROR
+
+=item B<value>()
+
+Grabs the appropriate return type from the reply 
 
 =head1 SEE ALSO
 
 Eredis can be obtained from 
 L<https://github.com/EulerianTechnologies/eredis>.
+
+=end pod

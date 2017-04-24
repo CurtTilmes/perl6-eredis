@@ -1,5 +1,7 @@
 use v6;
 
+use NativeCall;
+
 constant LIBEREDIS = 'eredis'; # liberedis.so
 
 enum EREDIS_RETURN ( EREDIS_ERRCMD => -2,
@@ -13,7 +15,10 @@ enum REDIS_REPLY ( REDIS_REPLY_STRING  => 1,
                    REDIS_REPLY_STATUS  => 5,
                    REDIS_REPLY_ERROR   => 6  );
 
-use NativeCall;
+class X::Eredis is Exception
+{
+    has Str $.message;
+}
 
 sub argv(@args)
 {
@@ -60,26 +65,22 @@ class Eredis::Reply is repr('CStruct') {
 
     method value() {
         fail 'Timeout' unless self;
+
         given $!type {
-            when REDIS_REPLY_STRING {
-                return $!str;
-            }
+            when REDIS_REPLY_STRING  { $!str      }
+
+            when REDIS_REPLY_INTEGER { $!integer  }
+
+            when REDIS_REPLY_NIL     { Nil        }
+
+            when REDIS_REPLY_STATUS  { $!str      }
+
+            when REDIS_REPLY_ERROR   { fail $!str }
+
             when REDIS_REPLY_ARRAY {
                 do for 0..^ $!elements {
                     nativecast(Eredis::Reply, $!element[$_]).value;
-                };
-            }
-            when REDIS_REPLY_INTEGER {
-                return $!integer;
-            }
-            when REDIS_REPLY_NIL {
-                return Nil;
-            }
-            when REDIS_REPLY_STATUS {
-                return $.str;
-            }
-            when REDIS_REPLY_ERROR {
-                fail $.str;
+                }
             }
         }
     }
@@ -114,31 +115,37 @@ class Eredis::Reader is repr('CPointer') {
     sub eredis_r_release(Eredis::Reader)
         is native(LIBEREDIS) { * }
 
-    multi method cmd(Str $cmd) returns Eredis::Reply {
-        eredis_r_cmd(self, $cmd) or fail 'Bad Eredis reply';
+    multi method cmd(Str:D $cmd) returns Eredis::Reply {
+        my $reply = eredis_r_cmd(self, $cmd)
+            or die X::Eredis.new(message => "Bad cmd($cmd)");
+        return $reply;
     }
 
     multi method cmd(*@args) returns Eredis::Reply {
-        eredis_r_cmdargv(self, |argv(@args));
+        my $reply = eredis_r_cmdargv(self, |argv(@args))
+            or die X::Eredis.new(message => "Bad cmd(@args[])");
+        return $reply;
     }
 
-    multi method append_cmd(Str $cmd) returns EREDIS_RETURN {
-        EREDIS_RETURN(eredis_r_append_cmd(self, $cmd))
+    multi method append_cmd(Str:D $cmd) {
+        eredis_r_append_cmd(self, $cmd) == EREDIS_OK
+            or die X::Eredis.new(message => "Bad append_cmd($cmd)");
     }
 
-    multi method append_cmd(*@args) returns EREDIS_RETURN {
-        EREDIS_RETURN(eredis_r_append_cmdargv(self, |argv(@args)))
+    multi method append_cmd(*@args) {
+        eredis_r_append_cmdargv(self, |argv(@args)) == EREDIS_OK
+            or die X::Eredis.new(message => "Bad append_cmd(@args[])");
     }
 
-    method reply() {
+    method reply() returns Eredis::Reply {
         eredis_r_reply(self)
     }
 
-    method reply_blocking() {
+    method reply_blocking() returns Eredis::Reply {
         eredis_r_reply_blocking(self)
     }
 
-    method reply_detach() {
+    method reply_detach() returns Eredis::Reply {
         eredis_r_reply_detach(self)
     }
 
@@ -168,6 +175,9 @@ class Eredis is repr('CPointer') {
     sub eredis_r_retry(Eredis, int32)
         is native(LIBEREDIS) { * }
 
+    sub eredis_r_max(Eredis, int32)
+        is native(LIBEREDIS) { * }
+
     sub eredis_run(Eredis) returns int32
         is native(LIBEREDIS) { * }
 
@@ -192,32 +202,39 @@ class Eredis is repr('CPointer') {
     sub eredis_free(Eredis)
         is native(LIBEREDIS) { * }
 
-    method new(Str $server?) {
-        my $self = eredis_new;
-
-        with $server {
-            my ($host, $port) = .split(':');
-            $self.host_add($host, $port.Int)
-                or die "Bad server $server";
-        }
-
-        $self;
+    method new() {
+        eredis_new;
     }
 
-    method host_add(Str $host, int32 $port) returns Bool {
-        eredis_host_add(self, $host, $port) == EREDIS_OK;
+    method host_add(Str:D $host, Int:D $port) {
+        eredis_host_add(self, $host, $port) == EREDIS_OK
+            or die X::Eredis.new(message => "host_add($host, $port) failed");
+        return self;
     }
 
-    method host_file(Str $filename) returns Int {
-        eredis_host_file(self, $filename);
+    method host_file(Str:D $filename) {
+        eredis_host_file(self, $filename) != EREDIS_ERR
+            or die X::Eredis.new(message => "host_file($filename) failed");
+        return self;
+    }
+
+    method timeout(Int:D $timeout-ms) {
+        eredis_timeout(self, $timeout-ms);
+        return self;
+    }
+
+    method max-readers(Int:D $max-readers) {
+        eredis_r_max(self, $max-readers);
+        return self;
+    }
+
+    method retry(Int:D $retry) {
+        eredis_r_retry(self, $retry);
+        return self;
     }
 
     method reader() {
         eredis_r(self);
-    }
-
-    method retry(Int $retry) {
-        eredis_r_retry(self, $retry);
     }
 
     method run() {
@@ -228,21 +245,17 @@ class Eredis is repr('CPointer') {
         eredis_run_thr(self);
     }
 
-    method timeout(Int $timeout) {
-        eredis_timeout(self, $timeout);
-    }
-
-    multi method write(Str $cmd) {
+    multi method write(Str:D $cmd) {
         eredis_w_cmd(self, $cmd) == EREDIS_OK
-            or fail 'Bad Eredis reply';;
+            or die X::Eredis.new(message => "write($cmd) failed");
     }
 
     multi method write(*@args) {
         eredis_w_cmdargv(self, |argv(@args)) == EREDIS_OK 
-            or fail 'Bad Eredis reply';
+            or die X::Eredis.new(message => "write(@args[]) failed");
     }
 
-    method write_pending() {
+    method write_pending() returns Int {
         eredis_w_pending(self);
     }
 
@@ -255,10 +268,6 @@ class Eredis is repr('CPointer') {
     }
     
     method free() {
-        eredis_free(self);
-    }
-
-    method DESTROY {
         eredis_free(self);
     }
 }

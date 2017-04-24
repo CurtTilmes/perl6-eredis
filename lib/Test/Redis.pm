@@ -26,6 +26,7 @@ class Test::Redis {
  
             CATCH { default { return False } }
         }
+        sleep 1;
         return True;
     }
 

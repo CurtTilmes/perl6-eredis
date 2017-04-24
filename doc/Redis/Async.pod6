@@ -20,4 +20,3 @@ Redis::Async
 
 =head2 Redis::Async.new(@servers);
 
-@servers is a list of "host:port" servers.
