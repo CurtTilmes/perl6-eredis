@@ -236,8 +236,8 @@ class Redis::Async {
         self.command('GEORADIUSBYMEMBER', $key, |@args, :$pipeline)
     }
 
-    method get($key, Bool :$pipeline) {
-        self.command('GET', $key, :$pipeline)
+    method get($key, Bool :$pipeline, Bool :$bin) {
+        self.command('GET', $key, :$pipeline, :$bin)
     }
 
     method getbit($key, Int $offset, Bool :$pipeline) {
@@ -561,7 +561,7 @@ class Redis::Async {
     }
     
     multi method set($key, $value, Numeric :$expire, Bool :$exists,
-               Bool :$async, Bool :$pipeline) {
+               Bool :$async, Bool :$pipeline, Bool :$bin) {
         my @args = 'SET', $key, $value;
 
         with $expire {
@@ -576,7 +576,7 @@ class Redis::Async {
 
         @args.push('NX') if defined $exists and not $exists;
 
-        self.command(|@args, :$async, :$pipeline)
+        self.command(|@args, :$async, :$pipeline, :$bin)
     }
 
     method strlen($key, :$pipeline) {
