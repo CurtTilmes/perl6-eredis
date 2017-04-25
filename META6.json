@@ -12,7 +12,7 @@
     "provides" : {
         "Eredis"       : "lib/Eredis.pm",
         "Redis::Async" : "lib/Redis/Async.pm",
-        "Test::Redis"  : "lib/Test/Redis.pm",
+        "Test::Redis"  : "lib/Test/Redis.pm"
     },
 
     "depends" : [ ],
