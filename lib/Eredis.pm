@@ -64,7 +64,7 @@ class Eredis::Reply is repr('CStruct') {
     }
 
     method value(Bool :$bin) {
-        fail 'Timeout' unless self;
+        fail X::Eredis.new(message => 'Timeout') unless self;
 
         given $!type {
             when REDIS_REPLY_STRING | REDIS_REPLY_STATUS {
@@ -79,9 +79,9 @@ class Eredis::Reply is repr('CStruct') {
             when REDIS_REPLY_NIL     { Nil }
 
             when REDIS_REPLY_ERROR   {
-                fail Blob.new(
+                fail X::Eredis.new(message => Blob.new(
                     nativecast(CArray[uint8], $!str)[0 ..^ $!len]
-                ).decode;
+                ).decode);
             }
 
             when REDIS_REPLY_ARRAY {

@@ -183,9 +183,9 @@ class Redis::Async {
         self.command('DEL', |@keys, :$async, :$pipeline)
     }
 
-#    method dump($key, :$pipeline) {
-#        self.cmd('DUMP', $key);
-#    }
+    method dump($key, :$pipeline) {
+        self.command('DUMP', $key, :$pipeline, :bin);
+    }
 
     method echo(Str $message, Bool :$pipeline) {
 	self.command('ECHO', $message, :$pipeline)
@@ -465,12 +465,12 @@ class Redis::Async {
         self.command('RPUSHX', $key, $value, :$async, :$pipeline)
     }
 
-#    method restore($key, Str $value, Int $pttl = 0, :$replace = False,
-#        :$async, :$pipeline) {
-#        my @args = 'RESTORE', $key, $pttl, $value;
-#        @args.push('REPLACE') if $replace;
-#        self.command(|@args, :$async, :$pipeline)
-#    }
+    method restore($key, Blob $value, Int $ttl = 0, :$replace,
+                   :$async, :$pipeline) {
+        my @args = 'RESTORE', $key, $ttl, $value;
+        @args.push('REPLACE') if $replace;
+        self.command(|@args, :$async, :$pipeline)
+    }
 
     method sadd($key, *@members, Bool :$async, Bool :$pipeline) {
 	self.command('SADD', $key, |@members, :$async, :$pipeline)
