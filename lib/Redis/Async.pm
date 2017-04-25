@@ -94,26 +94,26 @@ class Redis::Async {
         self.finish;
     }
 
-    method value() {
-        self.reply.value;
+    method value(Bool :$bin) {
+        self.reply.value(:$bin);
     }
 
     method timeout(Numeric $seconds) {
         $!eredis.timeout(Int($seconds*1000))
     }
 
-    method command(*@args, Bool :$async, Bool :$pipeline) {
-        my @arglist = @args.map({ .Str.encode });
+    method command(*@args, Bool :$async, Bool :$pipeline, Bool :$bin) {
+        my @arglist = @args.map({ $_ ~~ Blob ?? $_ !! .Str.encode });
         return self.write(|@arglist) if $async;
         return self.append_cmd(|@arglist) if $pipeline;
-        return self.cmd(|@arglist).value;
+        return self.cmd(|@arglist).value(:$bin);
     }
 
-    method blocking(*@args) {
+    method blocking(*@args, Bool :$bin) {
         my @arglist = @args.map({ .Str.encode });
         my $reader = $!eredis.reader;
-        LEAVE $reader.release;
-        return $reader.cmd(|@arglist).value;
+        LEAVE { $reader.release }
+        return $reader.cmd(|@arglist).value(:$bin);
     }
 
     method append($key, $value, Bool :$async, Bool :$pipeline) {

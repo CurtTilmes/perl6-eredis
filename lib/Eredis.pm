@@ -63,14 +63,15 @@ class Eredis::Reply is repr('CStruct') {
         REDIS_REPLY($!type)
     }
 
-    method value() {
+    method value(Bool :$bin) {
         fail 'Timeout' unless self;
 
         given $!type {
             when REDIS_REPLY_STRING | REDIS_REPLY_STATUS {
-                Blob.new(
+                my $value = Blob.new(
                     nativecast(CArray[uint8], $!str)[0 ..^ $!len]
-                ).decode;
+                );
+                $bin ?? $value !! $value.decode;
             }
 
             when REDIS_REPLY_INTEGER { $!integer }
