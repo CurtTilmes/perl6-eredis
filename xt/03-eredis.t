@@ -31,11 +31,11 @@ ok $reply.value, 'Check Set succeed';
 
 ok $reply = $r.cmd('get foo'), 'Get';
 
-is $reply.value(), 'bar', 'Check value';
+is $reply.value, 'bar', 'Check value';
 
-ok $reply = $r.cmd('get', 'foo'), 'Get argv';
+ok $reply = $r.cmd('get'.encode, 'foo'.encode), 'Get argv';
 
-is $reply.value(), 'bar', 'Check value';
+is $reply.value, 'bar', 'Check value';
 
 $r.release;
 

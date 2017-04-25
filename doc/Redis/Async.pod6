@@ -12,8 +12,6 @@ Redis::Async
 
  say $r.get('foo'); 
 
- $r.finish;
-
 =head1 DESCRIPTION
 
 =head1 METHODS

@@ -31,8 +31,9 @@ class Test::Redis {
     }
 
     method finish() {
-        $!proc.kill('INT') unless $!done;
-        try sink await $!done;
+        $!proc.kill('QUIT') unless $!done;
+        await $!done;
+        sleep 1;
         return True;
     }
 }

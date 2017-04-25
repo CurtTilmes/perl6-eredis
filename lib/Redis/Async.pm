@@ -15,7 +15,10 @@ class Redis::Cursor {
         while not @!values {
             return Nil if $!cursor.defined and $!cursor eq '0';
 
-            my @ret = $!redis.cmd(|@!command, ($!cursor // '0'), |@!args).value;
+            my @arglist = (|@!command, ($!cursor // '0'), |@!args)
+                .map({ .Str.encode });
+
+            my @ret = $!redis.cmd(|@arglist).value;
             $!cursor = @ret[0];
             @!values = |@ret[1];
         }
@@ -29,9 +32,10 @@ class Redis::PubSub {
     has Eredis::Reader $.reader handles<cmd release>;
 
     method new(*@args, :$reader) {
+        my @arglist = @args.map({ .Str.encode });
         $reader.clear;
         my $self = self.bless(reader => $reader);
-        $self.cmd(|@args);
+        $self.cmd(|@arglist);
         return $self;
     }
 
@@ -40,19 +44,23 @@ class Redis::PubSub {
     }
 
     method subscribe(*@channels) {
-        $!reader.cmd('SUBSCRIBE', @channels.map({ .Str }).flat).value
+        $!reader.cmd('SUBSCRIBE'.encode,
+                     @channels.map({ .Str.encode }).flat).value
     }
 
     method unsubscribe(*@channels) {
-        $!reader.cmd('UNSUBSCRIBE', @channels.map({ .Str }).flat).value
+        $!reader.cmd('UNSUBSCRIBE'.encode,
+                     @channels.map({ .Str.encode }).flat).value
     }
 
     method psubscribe(*@patterns) {
-        $!reader.cmd('PSUBSCRIBE', @patterns.map({ .Str }).flat).value
+        $!reader.cmd('PSUBSCRIBE'.encode,
+                     @patterns.map({ .Str.encode }).flat).value
     }
 
     method punsubscribe(*@patterns) {
-        $!reader.cmd('PUNSUBSCRIBE', @patterns.map({ .Str }).flat).value
+        $!reader.cmd('PUNSUBSCRIBE'.encode,
+                     @patterns.map({ .Str .encode}).flat).value
     }
 }
 
@@ -87,25 +95,25 @@ class Redis::Async {
     }
 
     method value() {
-        self.reply.value
+        self.reply.value;
     }
 
     method timeout(Numeric $seconds) {
         $!eredis.timeout(Int($seconds*1000))
     }
 
-    method command(*@args, Bool :$async = False, Bool :$pipeline = False) {
-        my @str-args = @args.map({ .Str });
-        return self.write(|@str-args) if $async;
-        return self.append_cmd(|@str-args) if $pipeline;
-        return self.cmd(|@str-args).value;
+    method command(*@args, Bool :$async, Bool :$pipeline) {
+        my @arglist = @args.map({ .Str.encode });
+        return self.write(|@arglist) if $async;
+        return self.append_cmd(|@arglist) if $pipeline;
+        return self.cmd(|@arglist).value;
     }
 
     method blocking(*@args) {
-        my @str-args = @args.map({ .Str });
+        my @arglist = @args.map({ .Str.encode });
         my $reader = $!eredis.reader;
         LEAVE $reader.release;
-        $reader.cmd(|@str-args).value
+        return $reader.cmd(|@arglist).value;
     }
 
     method append($key, $value, Bool :$async, Bool :$pipeline) {
@@ -113,11 +121,11 @@ class Redis::Async {
     }
 
     method auth(Str $password) {
-        self.cmd('AUTH', $password).value;
+        self.command('AUTH', $password);
     }
 
     method bgrewriteaof() {
-        self.write('BGREWRITEAOF')
+        self.write('BGREWRITEAOF');
     }
 
     method bgsave() {
@@ -160,7 +168,7 @@ class Redis::Async {
     }
 
     method dbsize(Bool :$pipeline) {
-        self.command('DBSIZE', :$pipeline)
+        self.command('DBSIZE', :$pipeline);
     }
 
     method decr($key, Bool :$async, Bool :$pipeline) {
@@ -329,7 +337,7 @@ class Redis::Async {
                            'replication'|'cpu'|'commandstats'|'cluster'|
                            'keyspace'|'all'|'default' = 'default') {
         %(
-             (do for self.cmd("INFO $section").value.split(/\r\n/,:skip-empty) {
+             (do for self.command('INFO', $section).split(/\r\n/,:skip-empty) {
                  next if /^\#/;
                  .split(':');
               }).flat;
@@ -410,7 +418,7 @@ class Redis::Async {
     }
 
     method ping() {
-        self.cmd('PING').value;
+        self.command('PING');
     }
 
     method psubscribe(*@patterns) {
@@ -426,7 +434,7 @@ class Redis::Async {
     }
 
     method quit() {
-	self.cmd('QUIT').value
+	self.command('QUIT');
     }
 
     method randomkey($key, :$pipeline) {
@@ -545,11 +553,11 @@ class Redis::Async {
     }
     
     method save() {
-        self.cmd('SAVE').value
+        self.command('SAVE');
     }
 
     method select(Int $database) {
-	self.cmd("SELECT $database").value
+	self.command('SELECT', $database);
     }
     
     multi method set($key, $value, Numeric :$expire, Bool :$exists,
@@ -580,11 +588,11 @@ class Redis::Async {
     }
 
     method swapdb(Int $db1, Int $db2) {
-	self.cmd("SWAPDB $db1 $db2").value
+	self.command("SWAPDB $db1 $db2");
     }
 
     method time() {
-        self.cmd("TIME").value
+        self.command("TIME");
     }
 
     method ttl($key, :$pipeline) {

@@ -23,12 +23,12 @@ class X::Eredis is Exception
 sub argv(@args)
 {
     my int32 $argc = @args.elems;
-    my @argv := CArray[Str].new;
+    my @argv := CArray[Pointer].new;
     my @argvlen := CArray[size_t].new;
     my $i = 0;
     for @args {
-        @argv[$i] = $_;
-        @argvlen[$i] = .encode('utf-8').bytes;  # This will probably bite me
+        @argv[$i] = nativecast(Pointer, $_);
+        @argvlen[$i] = $_.bytes;
         $i++;
     }
     return ($argc, @argv, @argvlen);
@@ -38,7 +38,7 @@ class Eredis::Reply is repr('CStruct') {
     has int32 $.type;
     has longlong $.integer;
     has size_t $.len;
-    has Str $.str;
+    has Pointer $.str;
     has size_t $.elements;
     has CArray[Pointer] $.element;
 
@@ -67,15 +67,21 @@ class Eredis::Reply is repr('CStruct') {
         fail 'Timeout' unless self;
 
         given $!type {
-            when REDIS_REPLY_STRING  { $!str      }
+            when REDIS_REPLY_STRING | REDIS_REPLY_STATUS {
+                Blob.new(
+                    nativecast(CArray[uint8], $!str)[0 ..^ $!len]
+                ).decode;
+            }
 
-            when REDIS_REPLY_INTEGER { $!integer  }
+            when REDIS_REPLY_INTEGER { $!integer }
 
-            when REDIS_REPLY_NIL     { Nil        }
+            when REDIS_REPLY_NIL     { Nil }
 
-            when REDIS_REPLY_STATUS  { $!str      }
-
-            when REDIS_REPLY_ERROR   { fail $!str }
+            when REDIS_REPLY_ERROR   {
+                fail Blob.new(
+                    nativecast(CArray[uint8], $!str)[0 ..^ $!len]
+                ).decode;
+            }
 
             when REDIS_REPLY_ARRAY {
                 do for 0..^ $!elements {
@@ -90,13 +96,13 @@ class Eredis::Reader is repr('CPointer') {
     sub eredis_r_cmd(Eredis::Reader, Str) returns Eredis::Reply
         is native(LIBEREDIS) { * }
 
-    sub eredis_r_cmdargv(Eredis::Reader, int32, CArray[Str], CArray[size_t])
+    sub eredis_r_cmdargv(Eredis::Reader, int32, CArray[Pointer], CArray[size_t])
         returns Eredis::Reply is native(LIBEREDIS) {*}
 
     sub eredis_r_append_cmd(Eredis::Reader, Str) returns int32
         is native(LIBEREDIS) { * }
 
-    sub eredis_r_append_cmdargv(Eredis::Reader, int32, CArray[Str],
+    sub eredis_r_append_cmdargv(Eredis::Reader, int32, CArray[Pointer],
                                 CArray[size_t]) returns int32
         is native(LIBEREDIS) { * }
 
@@ -123,7 +129,7 @@ class Eredis::Reader is repr('CPointer') {
 
     multi method cmd(*@args) returns Eredis::Reply {
         my $reply = eredis_r_cmdargv(self, |argv(@args))
-            or die X::Eredis.new(message => "Bad cmd(@args[])");
+            or die X::Eredis.new(message => "Bad cmd(@args[].join(','))");
         return $reply;
     }
 
@@ -190,7 +196,7 @@ class Eredis is repr('CPointer') {
     sub eredis_w_cmd(Eredis, Str) returns int32
         is native(LIBEREDIS) { * }
 
-    sub eredis_w_cmdargv(Eredis, int32, CArray[Str], CArray[size_t])
+    sub eredis_w_cmdargv(Eredis, int32, CArray[Pointer], CArray[size_t])
         returns int32 is native(LIBEREDIS) { * }
 
     sub eredis_w_pending(Eredis) returns int32
