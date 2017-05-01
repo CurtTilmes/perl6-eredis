@@ -39,7 +39,7 @@ for publish/subscribe.
 
 ## Associative usage
 
-*Redis::Async* also does the Associative role:
+`Redis::Async` also does the Associative role:
 
     $r<foo> = 'bar';
 
