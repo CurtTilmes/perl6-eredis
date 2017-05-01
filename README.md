@@ -65,7 +65,7 @@ values with the `:bin` flag.  It is enabled by default by `$r.dump`.
 
 ## Async writing
 
-If you use the :async command, the write calls will be queued and sent
+If you use the :async option, the write calls will be queued and sent
 to the Redis server in the background, and the call will return
 immediately.  This can dramatically speed up multiple writes.
 You can wait for writes to complete with $r.write-wait.
