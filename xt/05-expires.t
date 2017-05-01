@@ -16,14 +16,13 @@ ok $r ~~ Redis::Async, 'Created Object';
 
 ok $r.ping, 'Ping';
 
-ok $r.set('expire', 'goes away', expire => 1), 'Set expiring key';
+ok $r.set('expire', 'goes away', 'ex', 1), 'Set expiring key';
 
 is $r.get('expire'), 'goes away', 'Get expiring key';
 
 sleep 2;
 
 is $r.get('expire'), Nil, 'Gone';
-
 
 ok $r.set('foo', 'bar'), 'Set key';
 
@@ -55,7 +54,7 @@ sleep 2;
 
 is $r.get('foo'), Nil, 'key expired';
 
-ok $r.set('foo', 'bar', expire => 10), 'Set key with expire';
+ok $r.set('foo', 'bar', 'ex', 10), 'Set key with expire';
 
 ok $r.ttl('foo') > 9, 'TTL ok';
 

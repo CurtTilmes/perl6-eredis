@@ -18,7 +18,7 @@ is $r.lpushx('nolist', 1), 0, 'LPUSHX';
 
 is $r.type('mylist'), 'list', 'Type of list';
 
-is-deeply $r.lrange('mylist'), ("3", "2", "1"), 'LRange list';
+is-deeply $r.lrange('mylist', 0, -1), ("3", "2", "1"), 'LRange list';
 
 is $r.lindex('mylist', 1), 2, 'LINDEX';
 

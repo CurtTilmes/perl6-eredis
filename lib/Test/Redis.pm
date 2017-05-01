@@ -33,8 +33,8 @@ class Test::Redis {
     method finish() {
         $!proc.kill('QUIT') unless $!done;
         await $!done;
+        unlink 'dump.rdb';
         sleep 1;
         return True;
     }
 }
-

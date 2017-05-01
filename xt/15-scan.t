@@ -21,7 +21,7 @@ for 1..100 {
 
 $r.write-wait;
 
-ok my $scan-cursor = $r.scan('key:*'), 'Create SCAN Cursor';
+ok my $scan-cursor = $r.scan('MATCH', 'key:*'), 'Create SCAN Cursor';
 
 ok my $sscan-cursor = $r.sscan('myset'), 'Create SSCAN Cursor';
 

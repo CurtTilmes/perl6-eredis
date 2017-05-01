@@ -3,7 +3,7 @@ use Test;
 use Test::Redis;
 use Redis::Async;
 
-plan 47;
+plan 46;
 
 my $port = 16379;
 
@@ -17,8 +17,6 @@ ok $r ~~ Redis::Async, 'Created Object';
 ok $r.ping, 'Ping';
 
 is $r.dbsize, 0, 'DBSIZE empty';
-
-ok $r.bgrewriteaof, 'BGREWRITEAOF';
 
 ok $r.bgsave, 'BGSAVE';
 
@@ -48,11 +46,11 @@ ok $r.set('key:😀', '😀'), 'Set unicode';
 
 is $r.get('key:😀'), '😀', 'Get unicode';
 
-nok $r.set('notthere', 'exists', :exists), 'Set only if exists';
+nok $r.set('notthere', 'exists', 'XX'), 'Set only if exists';
 
 is $r.get('notthere'), Nil, 'Still not there';
 
-ok $r.set('foo', 'there', :exists), 'Set if exists there';
+ok $r.set('foo', 'there', 'XX'), 'Set if exists there';
 
 is $r.get('foo'), 'there', 'Get there';
 
@@ -88,13 +86,13 @@ is $r.type('foo'), 'none', 'No Type';
 
 ok $r.select(0), 'Select database 0';
 
-ok $r.mset('k1', 1, k2 => 2), 'Mset list/pair';
+ok $r.mset('k1', 1, 'k2', 2), 'Mset';
 
-ok $r.mset(k3 => 3, 'k4', 4), 'Mset pair/list';
+ok $r.mset('k3', 3, 'k4', 4), 'Mset';
 
-ok $r.msetnx(k5 => 5, k6 => 6), 'Msetnx';
+ok $r.msetnx('k5', 5, 'k6', 6), 'Msetnx';
 
-nok $r.msetnx(k6 => 6, k7 => 7), 'Msetnx already exists';
+nok $r.msetnx('k6', 6, 'k7', 7), 'Msetnx already exists';
 
 is $r.dbsize, 7, 'DBSIZE';
 

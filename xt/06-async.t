@@ -19,7 +19,7 @@ $r.write-wait;
 is $r.get('my key'), 'something foo', 'Got async reply';
 
 for 1..100 {
-    $r.set("key:$_", $_.Str, :async);
+    $r.set("key:$_", $_, :async);
 }
 
 $r.write-wait;

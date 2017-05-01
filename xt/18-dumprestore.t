@@ -20,11 +20,11 @@ is $r.dump('mykey'), $val, 'Dumped key';
 
 $r.del('mykey');
 
-is $r.restore('mykey', $val), 'OK', 'Restored ok';
+is $r.restore('mykey', 0, $val), 'OK', 'Restored ok';
 
 is $r.get('mykey'), 10, 'Restored value';
 
-throws-like { $r.restore('mykey', $val) }, X::Eredis,
+throws-like { $r.restore('mykey', 0, $val) }, X::Eredis,
     message => 'ERR Target key name is busy.';
 
 done-testing;
