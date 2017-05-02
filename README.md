@@ -134,7 +134,7 @@ element.
         say "$x = $r{$x}";
     }
 
-The SCAN commands also just take the parameters, not the 'MATCH' and
+The scan commands also just take the parameters, not the 'MATCH' and
 'COUNT' strings.
 
 ## Publish/Subscribe
