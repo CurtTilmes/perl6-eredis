@@ -71,7 +71,9 @@ reconnect to that one in case of a down/up event.
 
 You can set the number of retries on failure with `$r.retry($retries)`
 (defaults to 1) after which the client will fall back to the next
-server.
+server.  You can also set retries with an option to new:
+
+    my $r = Redis::Async.new('localhost:6379', retries => 2);
 
 ## Associative usage
 

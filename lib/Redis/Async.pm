@@ -80,7 +80,8 @@ class Redis::Async does Associative {
     has %!readers;
     has $!readers-lock = Lock.new;
 
-    method new(Int :$max-readers is copy, Numeric :$timeout, *@servers) {
+    method new(Int :$max-readers is copy, Numeric :$timeout, Int :$retries,
+               *@servers) {
         my $eredis = Eredis.new;
 
         $max-readers //= %*ENV<RAKUDO_MAX_THREADS> // 16;
@@ -88,6 +89,8 @@ class Redis::Async does Associative {
         $eredis.max-readers($max-readers);
 
         $eredis.timeout(Int($timeout*1000)) with $timeout;
+
+        $eredis.retry($retries) with $retries;
 
         for @servers {
             my ($host, $port) = .split(':');
