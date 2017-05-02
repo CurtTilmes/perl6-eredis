@@ -62,7 +62,7 @@ Add additional servers:
     $r.host-add('server3:6379');
 
 Or list servers in a configuration file, one line per host:port and
-add the file:
+add the file, alone, or as an option to `.new(host-file => 'my-hosts.conf')`
 
     $r.host-file('my-hosts.conf');
 
@@ -154,7 +154,7 @@ object that can read messages with .message:
 
 ## Multiple threads
 
-You can use a single `Redis::Async` objects to issue requests from
+You can use a single `Redis::Async` object to issue requests from
 multiple threads simultaneously.  Internally each thread will get its
 own communication channel so the requests won't get mixed up. You can
 set the maximum number of readers with max-readers:

@@ -10,9 +10,9 @@ Eredis - NativeCall bindings for the Eulerian Technologies eredis library
 
  my $e = Eredis.new;
 
- $e.host_add('localhost', 6379); # Add a redis targer, first is 'preferred'
+ $e.host-add('localhost', 6379); # Add a redis targer, first is 'preferred'
 
- $e.host_file('my-hosts.conf');  # one line per host:port
+ $e.host-file('my-hosts.conf');  # one line per host:port
 
  $e.timeout(200);                # Set timeout - default 5000ms, 5 seconds
 
@@ -20,7 +20,7 @@ Eredis - NativeCall bindings for the Eulerian Technologies eredis library
 
  $e.retry(1);                    # Set retry for reader - default 1
 
- start $e.run_thr;               # Start eredis managed thread for async writes
+ start $e.run-thr;               # Start eredis managed thread for async writes
 
  my $r = $e.reader;              # Create a reader object
 
@@ -30,7 +30,7 @@ Eredis - NativeCall bindings for the Eulerian Technologies eredis library
 
  say $reply.value;               # 'bar'
 
- $r.append_cmd('set foo bar');   # Add pipe-lined read
+ $r.append-cmd('set foo bar');   # Add pipe-lined read
 
  my $reply = $r.reply;           # Get reply from pipe-lined read
 
@@ -64,13 +64,13 @@ A Nativecall C<eredis_t> pointer.
 
 C<eredis_new>.
 
-=item method B<host_add>(Str:D $host, Int:D $port)
+=item method B<host-add>(Str:D $host, Int:D $port)
 
 C<eredis_host_add>
 
 throws X::Eredis on error
 
-=item method B<host_file>(Str:D $filename) returns Int
+=item method B<host-file>(Str:D $filename) returns Int
 
 C<eredis_host_file> returns number of hosts, or -1 on error
 
@@ -106,7 +106,7 @@ run eredis event loop (for writes) in blocking mode
 
 The loop will be stopped by a call to 'shutdown' or 'free'.
 
-=item method B<run_thr>()
+=item method B<run-thr>()
 
 C<eredis_run_thr>
 
@@ -122,7 +122,7 @@ C<eredis_w_cmd>
 
 C<eredis_w_cmdargv>
 
-=item method B<write_pending>() returns Int
+=item method B<write-pending>() returns Int
 
 C<eredis_w_pending>
 
@@ -160,13 +160,13 @@ C<eredis_r_cmdargv>
 
 Blocking read request
 
-=item multi method B<append_cmd>(Str:D $cmd)
+=item multi method B<append-cmd>(Str:D $cmd)
 
 C<eredis_r_append_cmd>
 
 Pipelining read request
 
-=item multi method B<append_cmd>(*@args)
+=item multi method B<append-cmd>(*@args)
 
 C<eredis_r_append_cmdargv>
 
@@ -178,13 +178,13 @@ C<eredis_r_reply>
 
 Retrieve reply from a pipelined request
 
-=item method B<reply_blocking>() returns Eredis::Reply
+=item method B<reply-blocking>() returns Eredis::Reply
 
 C<eredis_r_reply_blocking>
 
 Blocking read a reply (for pub/sub)
 
-=item method B<reply_detach>() returns Eredis::Reply
+=item method B<reply-detach>() returns Eredis::Reply
 
 C<eredis_r_reply_detach>
 
