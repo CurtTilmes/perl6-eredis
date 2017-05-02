@@ -2,35 +2,14 @@ use v6;
 
 use Eredis;
 
-enum REDIS_COMMAND_TYPE <
-    REDIS_COMMAND_WRITE
-    REDIS_COMMAND_READ
-    REDIS_COMMAND_BLOCKING
-    REDIS_COMMAND_BINARY
-    REDIS_COMMAND_CURSOR
-    REDIS_COMMAND_MS
->;
-
-my %commands =
-    dump       => REDIS_COMMAND_BINARY,
-    blpop      => REDIS_COMMAND_BLOCKING,
-    brpop      => REDIS_COMMAND_BLOCKING,
-    brpoplpush => REDIS_COMMAND_BLOCKING,
-    scan       => REDIS_COMMAND_CURSOR,
-    sscan      => REDIS_COMMAND_CURSOR,
-    hscan      => REDIS_COMMAND_CURSOR,
-    zscan      => REDIS_COMMAND_CURSOR,
-    pexpireat  => REDIS_COMMAND_MS
-;
-
 class Redis::Cursor {
     has $.redis;
     has @.command;
     has @.args;
+    has Bool $.pair;
 
     has $.cursor;
     has @.values;
-    has $!pair = @!command[0].decode.uc eq 'HSCAN'|'ZSCAN';
 
     method next() {
         while not @!values {
@@ -38,7 +17,9 @@ class Redis::Cursor {
 
             $!cursor //= '0';
 
-            my @ret = $!redis.cmd(|@!command, $!cursor.encode, |@!args).value;
+            my @ret = $!redis.reader.cmd(|@!command, $!cursor.encode, |@!args)
+                      .value;
+
             $!cursor = @ret[0];
             @!values = |@ret[1];
         }
@@ -49,18 +30,17 @@ class Redis::Cursor {
 }
 
 class Redis::PubSub {
-    has Eredis::Reader $.reader handles<cmd release>;
+    has Eredis::Reader $.reader;
 
     method new(*@args, :$reader) {
         my @arglist = @args.map({ .Str.encode });
         $reader.clear;
-        my $self = self.bless(reader => $reader);
-        $self.cmd(|@arglist);
-        return $self;
+        $reader.cmd(|@arglist);
+        self.bless(reader => $reader);
     }
 
     method message() {
-        $!reader.reply_blocking.value
+        $!reader.reply-blocking.value
     }
 
     method subscribe(*@channels) {
@@ -82,31 +62,51 @@ class Redis::PubSub {
         $!reader.cmd('PUNSUBSCRIBE'.encode,
                      @patterns.map({ .Str .encode}).flat).value
     }
+
+    method release() {
+        $!reader.release;
+        $!reader = Nil;
+    }
+
+    method DESTROY() {
+        self.release if $!reader;
+    }
 }
 
 class Redis::Async does Associative {
-    has Eredis $.eredis handles <host_add host_file retry
-                                 write write_pending write-wait>;
+    has Eredis $.eredis handles <host-add host-file retry max-readers
+                                 write write-pending write-wait>;
 
-    has Eredis::Reader $.reader handles <cmd append_cmd reply clear>;
+    has %!readers;
+    has $!readers-lock = Lock.new;
 
-    method new(*@servers) {
+    method new(Int :$max-readers is copy, Numeric :$timeout, *@servers) {
         my $eredis = Eredis.new;
+
+        $max-readers //= %*ENV<RAKUDO_MAX_THREADS> // 16;
+
+        $eredis.max-readers($max-readers);
+
+        $eredis.timeout(Int($timeout*1000)) with $timeout;
+
         for @servers {
             my ($host, $port) = .split(':');
-            $eredis.host_add($host, $port.Int);
+            $eredis.host-add($host, $port.Int);
         }
 
-        start $eredis.run_thr;
+        start $eredis.run-thr;
 
-        nextwith(:$eredis, reader => $eredis.reader);
+        nextwith(:$eredis);
+    }
+
+    method reader() {
+        $!readers-lock.protect: { %!readers{$*THREAD.id} //= $!eredis.reader }
     }
 
     method finish() {
-        .release with $!reader;
+        .release for %!readers.values:delete;
         .shutdown with $!eredis;
         .free with $!eredis;
-        $!reader = Nil;
         $!eredis = Nil;
     }
 
@@ -115,18 +115,11 @@ class Redis::Async does Associative {
     }
 
     method value(Bool :$bin) {
-        self.reply.value(:$bin);
+        self.reader.reply.value(:$bin);
     }
 
     method timeout(Numeric $seconds) {
         $!eredis.timeout(Int($seconds*1000))
-    }
-
-    method blocking(*@args, Bool :$bin) {
-        my @arglist = @args.map({ .Str.encode });
-        my $reader = $!eredis.reader;
-        LEAVE { $reader.release }
-        $reader.cmd(|@arglist).value(:$bin);
     }
 
     method append(|c) { self.FALLBACK('APPEND', |c) }  # override Any.append
@@ -143,7 +136,7 @@ class Redis::Async does Associative {
              (do for self.FALLBACK('INFO', $section).split(/\r\n/,:skip-empty) {
                  next if /^\#/;
                  .split(':');
-              }).flat;
+              }).flat
         )
     }
 
@@ -155,50 +148,77 @@ class Redis::Async does Associative {
         Redis::PubSub.new('SUBSCRIBE', |@channels, reader => $!eredis.reader)
     }
 
+    method scan(Str $pattern?, Int $count?)
+    {
+        my @args = $pattern ?? ('MATCH'.encode, $pattern.encode) !! ();
+        @args.push('COUNT'.encode, $count.Str.encode) if $count;
+
+        Redis::Cursor.new(redis => self,
+                          command => ('SCAN'.encode),
+                          args => @args);
+    }
+
+    method sscan(Str $key, Str $pattern?, Int $count?)
+    {
+        my @args = $pattern ?? ('MATCH'.encode, $pattern.encode) !! ();
+        @args.push('COUNT'.encode, $count.Str.encode) if $count;
+
+        Redis::Cursor.new(redis => self,
+                          command => ('SSCAN'.encode, $key.encode),
+                          args => @args);
+    }
+
+    method hscan(Str $key, Str $pattern?, Int $count?)
+    {
+        my @args = $pattern ?? ('MATCH'.encode, $pattern.encode) !! ();
+        @args.push('COUNT'.encode, $count.Str.encode) if $count;
+
+        Redis::Cursor.new(redis => self, :pair,
+                          command => ('HSCAN'.encode, $key.encode),
+                          args => @args);
+    }
+
+    method zscan(Str $key, Str $pattern?, Int $count?)
+    {
+        my @args = $pattern ?? ('MATCH'.encode, $pattern.encode) !! ();
+        @args.push('COUNT'.encode, $count.Str.encode) if $count;
+
+        Redis::Cursor.new(redis => self, :pair,
+                          command => ('ZSCAN'.encode, $key.encode),
+                          args => @args);
+    }
+
     method FALLBACK(*@args, Bool :$async, Bool :$pipeline, Bool :$bin is copy)
     {
-        my $type = %commands{@args[0].lc} // REDIS_COMMAND_READ;
-
-        $bin = True if $type == REDIS_COMMAND_BINARY;
-
         my @arglist = do for @args {
             when Blob    { $_ }
-
             when Str     { .encode }
-
-            when $_ ~~ Instant && $type == REDIS_COMMAND_MS
-                         { (.to-posix[0]*1000).Int.Str.encode }
-
             when Instant { .to-posix[0].Int.Str.encode }
-
             default      { .Str.encode }
         };
 
-        if $type == REDIS_COMMAND_CURSOR
-        {
-            my @command = @args[0].uc eq 'SCAN'
-                          ?? (@arglist.shift)
-                          !! (@arglist.shift, @arglist.shift);
+        return $!eredis.write(|@arglist) if $async;
 
-            return Redis::Cursor.new(redis => self,
-                                     command => @command,
-                                     args => @arglist);
-        }
+        return self.reader.append-cmd(|@arglist) if $pipeline;
 
-        return self.blocking(|@arglist) if $type == REDIS_COMMAND_BLOCKING;
-
-        return self.write(|@arglist) if $async;
-
-        return self.append_cmd(|@arglist) if $pipeline;
-
-        return self.cmd(|@arglist).value(:$bin);
+        self.reader.cmd(|@arglist).value(:$bin);
     }
 
-    method AT-KEY($key)           { self.FALLBACK('GET', $key) }
+    method AT-KEY($key) {
+        self.FALLBACK('GET', $key);
+    }
 
-    method EXISTS-KEY($key)       { self.FALLBACK('EXISTS', $key) }
+    method EXISTS-KEY($key) {
+        self.FALLBACK('EXISTS', $key).Bool;
+    }
 
-    method DELETE-KEY($key)       { self.FALLBACK('DEL', $key) }
+    method DELETE-KEY($key) {
+        LEAVE self.FALLBACK('DEL', $key);
+        self.FALLBACK('GET', $key);
+    }
 
-    method ASSIGN-KEY($key, $new) { self.FALLBACK('SET', $key, $new) }
+    method ASSIGN-KEY($key, $new) {
+        self.FALLBACK('SET', $key, $new);
+        $new;
+    }
 }

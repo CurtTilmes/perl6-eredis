@@ -19,23 +19,59 @@ high performance, reentrant and thread-safe.
 
 ## Notes
 
-Case doesn't matter for commands `$r.GET` and `$r.get` are the same thing.
+Case doesn't matter for commands `$r.GET` and `$r.get` are the same
+thing with a few exceptions:
 
-`$r.hgetall()` returns a `Hash`
+* `hgetall` returns a `Hash`
 
-`$r.info()` returns a `Hash`
+* `info` returns a `Hash`
 
-`$r.expireat()` and `$r.pexpireat()` can take an `Instant` :
+* `subscribe` and `psubscribe` should be lower case.
+
+* `scan`, `sscan`, `hscan`, and `zscan` should be lower case.
+
+An `Instant` will be converted into epoch seconds.
 
     $r.expireat('foo', now+5);  # same as $r.expire('foo', 5)
+
+See [redis.io](https://redis.io/commands) for the complete list of
+commands.  Note carefully the version of your Redis server and if you
+are using an older version, which commands are valid.
 
 ## Timeouts
 
 You can set the Redis timeout with `$r.timeout($seconds)`.  You can
 disable timeouts entirely with `$r.timeout(0)`. This is highly
-recommended if you use blocking read requests, instead specify a
+recommended if you use blocking read requests -- instead specify a
 timeout with the command.  Timeouts should probably also be disabled
-for publish/subscribe.
+for publish/subscribe.  You can also set timeout on creation:
+
+    my $r = Redis::Async.new('localhost:6379', timeout => 0);
+
+## Multiple Redis servers
+
+You can configure multiple redundant (NOT clustered) Redis servers in
+several ways.
+
+List multiple servers on creation:
+
+    my $r = Redis::Async.new('server1:6379', 'server2:6379');
+
+Add additional servers:
+
+    $r.host-add('server3:6379');
+
+Or list servers in a configuration file, one line per host:port and
+add the file:
+
+    $r.host-file('my-hosts.conf');
+
+The first host provided becomes the "preferred" one.  It will always
+reconnect to that one in case of a down/up event.
+
+You can set the number of retries on failure with `$r.retry($retries)`
+(defaults to 1) after which the client will fall back to the next
+server.
 
 ## Associative usage
 
@@ -53,11 +89,11 @@ Strings are encoded as utf8 by default, but you can also pass in Blobs
 of binary data.  Some commands like `RESTORE` require this.
 
 Strings are also decoded as utf8 by default, you can request binary
-values with the `:bin` flag.  It is enabled by default by `$r.dump`.
+values with the `:bin` flag.  It is highly recommended for `dump`.
 
     say $r.get('foo', :bin);  # Blob:0x<62 61 72>
 
-    my $x = $r.dump('foo');
+    my $x = $r.dump('foo', :bin);
 
     $r<foo>:delete;
 
@@ -66,11 +102,12 @@ values with the `:bin` flag.  It is enabled by default by `$r.dump`.
 ## Async writing
 
 If you use the :async option, the write calls will be queued and sent
-to the Redis server in the background, and the call will return
-immediately.  This can dramatically speed up multiple writes.
-You can wait for writes to complete with $r.write-wait.
+to the Redis server in the background and the call will return
+immediately.  This can dramatically speed up multiple writes.  You can
+wait for pending writes to complete with $r.write-wait.
 
     for ^100 { $r.set("key:$_", $_, :async) }
+    say "Pending writes: $r.write-pending()";
     $r.write-wait;
 
 ## Pipeline reads
@@ -85,20 +122,23 @@ efficiently and speed up performance.
 
 ## SCANing
 
-The SCAN commands `SCAN`, `SSCAN`, `HSCAN`, `ZSCAN` return a
+The SCAN commands have special lower case functions that return a
 `Redis::Cursor` object that has a `.next` method to get the next
 element.
 
-    my $cursor = $r.scan('MATCH', "key:*"); 
+    my $cursor = $r.scan('key:*');
 
     while $cursor.next -> $x {
         say "$x = $r{$x}";
     }
 
+The SCAN commands also just take the parameters, not the 'MATCH' and
+'COUNT' strings.
+
 ## Publish/Subscribe
 
-The `SUBSCRIBE` commands return a `Redis::PubSub` object that can
-read messages with .message:
+The `subscribe` and `psubscribe` commands return a `Redis::PubSub`
+object that can read messages with .message:
 
     $r.timeout(0);
     my $sub = $r.subscribe('foo');
@@ -110,9 +150,30 @@ read messages with .message:
         last if @m[2] eq 'QUIT';
     }
 
+## Multiple threads
+
+You can use a single `Redis::Async` objects to issue requests from
+multiple threads simultaneously.  Internally each thread will get its
+own communication channel so the requests won't get mixed up. You can
+set the maximum number of readers with max-readers:
+
+    $r.max-readers(50);
+
+Max readers will default to 16, so if you want to access Redis from
+more threads than that, increase it.  As a convenience for Rakudo
+users, if you set the RAKUDO_MAX_THREADS environment variable,
+max-readers will be set to that number.  You can also specify the
+max-readers option to new():
+
+    $r = Redis::Async.new('localhost:6379', max-readers => 50);
+
 ## Transactions
 
-TBI
+TBD
+
+## Clusters
+
+TBD
 
 # LICENSE
 

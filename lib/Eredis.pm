@@ -48,9 +48,6 @@ class Eredis::Reply is repr('CStruct') {
     sub eredis_reply_free(Eredis::Reply)
         is native(LIBEREDIS) { * }
 
-    sub eredis_reply_element(Eredis::Reply, int32) returns Eredis::Reply
-        is native(LIBEREDIS) { * }
-
     method dump() {
         eredis_reply_dump(self)
     }
@@ -86,7 +83,7 @@ class Eredis::Reply is repr('CStruct') {
 
             when REDIS_REPLY_ARRAY {
                 do for 0..^ $!elements {
-                    nativecast(Eredis::Reply, $!element[$_]).value;
+                    nativecast(Eredis::Reply, $!element[$_]).value(:$bin);
                 }
             }
         }
@@ -134,12 +131,12 @@ class Eredis::Reader is repr('CPointer') {
         return $reply;
     }
 
-    multi method append_cmd(Str:D $cmd) {
+    multi method append-cmd(Str:D $cmd) {
         eredis_r_append_cmd(self, $cmd) == EREDIS_OK
             or die X::Eredis.new(message => "Bad append_cmd($cmd)");
     }
 
-    multi method append_cmd(*@args) {
+    multi method append-cmd(*@args) {
         eredis_r_append_cmdargv(self, |argv(@args)) == EREDIS_OK
             or die X::Eredis.new(message => "Bad append_cmd(@args[])");
     }
@@ -148,11 +145,11 @@ class Eredis::Reader is repr('CPointer') {
         eredis_r_reply(self)
     }
 
-    method reply_blocking() returns Eredis::Reply {
+    method reply-blocking() returns Eredis::Reply {
         eredis_r_reply_blocking(self)
     }
 
-    method reply_detach() returns Eredis::Reply {
+    method reply-detach() returns Eredis::Reply {
         eredis_r_reply_detach(self)
     }
 
@@ -213,13 +210,18 @@ class Eredis is repr('CPointer') {
         eredis_new;
     }
 
-    method host_add(Str:D $host, Int:D $port) {
+    multi method host-add(Str:D $hostport) {
+        my ($host, $port) = $hostport.split(':');
+        samewith($host, $port.Int);
+    }
+
+    multi method host-add(Str:D $host, Int:D $port) {
         eredis_host_add(self, $host, $port) == EREDIS_OK
             or die X::Eredis.new(message => "host_add($host, $port) failed");
         return self;
     }
 
-    method host_file(Str:D $filename) {
+    method host-file(Str:D $filename) {
         eredis_host_file(self, $filename) != EREDIS_ERR
             or die X::Eredis.new(message => "host_file($filename) failed");
         return self;
@@ -248,7 +250,7 @@ class Eredis is repr('CPointer') {
         eredis_run(self);
     }
 
-    method run_thr() {
+    method run-thr() {
         eredis_run_thr(self);
     }
 
@@ -262,12 +264,12 @@ class Eredis is repr('CPointer') {
             or die X::Eredis.new(message => "write(@args[]) failed");
     }
 
-    method write_pending() returns Int {
+    method write-pending() returns Int {
         eredis_w_pending(self);
     }
 
     method write-wait() {
-        while self.write_pending() {}
+        while eredis_w_pending(self) {}
     }
 
     method shutdown() {

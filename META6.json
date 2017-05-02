@@ -1,6 +1,10 @@
 {
     "name" : "Redis::Async",
 
+    "description" : "Perl 6 bindings for Eredis, high-performance Redis Client",
+
+    "auth" : "github:CurtTilmes",
+
     "version" : "0.5",
 
     "source-url" : "https://github.com/CurtTilmes/perl6-eredis.git",
@@ -15,9 +19,7 @@
         "Test::Redis"  : "lib/Test/Redis.pm"
     },
 
-    "depends" : [ ],
-
-    "description" : "Perl6 bindings for eredis",
+    "depends" : [ "NativeCall" ],
 
     "test-depends" : [ "Test" ],
 

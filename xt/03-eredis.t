@@ -21,7 +21,7 @@ if $!
 
 ok $e, 'Created Eredis object';
 
-ok $e.host_add('localhost', $port), 'host_add';
+ok $e.host-add('localhost', $port), 'host_add';
 
 ok my $r = $e.reader, 'Create Reader Object';
 

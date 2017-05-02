@@ -16,7 +16,7 @@ ok $r.set('mykey', 10), 'Set value';
 
 my $val = Blob.new(0,192,10,6,0,248,114,63,197,251,251,95,40);
 
-is $r.dump('mykey'), $val, 'Dumped key';
+is $r.dump('mykey', :bin), $val, 'Dumped key';
 
 $r.del('mykey');
 
