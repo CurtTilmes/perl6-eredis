@@ -46,7 +46,7 @@ is $r.get('foo'), Nil, 'key expired';
 
 ok $r.set('foo', 'bar'), 'Set key';
 
-is $r.pexpireat('foo', ((now+1).to-posix[0]*1000).Int),
+is $r.pexpireat('foo', (now+1).DateTime.posix * 1000),
     1, 'Expire key with pexpireat';
 
 is $r.get('foo'), 'bar', 'key not expired yet';

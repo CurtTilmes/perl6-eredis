@@ -64,12 +64,12 @@ class Redis::PubSub {
     }
 
     method release() {
-        $!reader.release;
+        .release with $!reader;
         $!reader = Nil;
     }
 
     method DESTROY() {
-        self.release if $!reader;
+        self.release;
     }
 }
 
@@ -193,13 +193,14 @@ class Redis::Async does Associative {
                           args => @args);
     }
 
-    method FALLBACK(*@args, Bool :$async, Bool :$pipeline, Bool :$bin is copy)
+    method FALLBACK(*@args, Bool :$async, Bool :$pipeline, Bool :$bin)
     {
         my @arglist = do for @args {
-            when Blob    { $_ }
-            when Str     { .encode }
-            when Instant { .to-posix[0].Int.Str.encode }
-            default      { .Str.encode }
+            when Blob     { $_ }
+            when Str      { .encode }
+            when Instant  { .DateTime.posix.Str.encode }
+            when DateTime { .posix.Str.encode }
+            default       { .Str.encode }
         };
 
         return $!eredis.write(|@arglist) if $async;
