@@ -194,6 +194,14 @@ TBD
 
 TBD
 
+# SEE ALSO
+
+There is another Perl6 Redis module
+[`Redis`](https://github.com/cofyc/perl6-redis) that uses a Perl 6
+implementation of the protocol so it doesn't depend on external
+libraries like this module.  If you don't need the performance, it may
+be easier to use.
+
 # LICENSE
 
 [Redis](https://redis.io), and the Redis logo are the trademarks of
