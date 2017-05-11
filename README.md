@@ -7,6 +7,15 @@ library for [Redis](https://redis.io).
 Eredis is a C client library built over Hiredis. It is lightweight,
 high performance, reentrant and thread-safe.
 
+## INSTALLATION
+
+This module depends on the
+[Eredis](https://github.com/EulerianTechnologies/eredis) library, so
+it must be installed first.  Then just use `zef` to install this
+package from the Perl 6 ecosystem:
+
+    zef install Redis::Async
+
 ## Basic Usage
 
     use Redis::Async;
@@ -77,7 +86,7 @@ server.  You can also set retries with an option to new:
 
 ## Associative usage
 
-`Redis::Async` also does the Associative role:
+`Redis::Async` also does the `Associative` role:
 
     $r<foo> = 'bar';
 
@@ -134,8 +143,8 @@ element.
         say "$x = $r{$x}";
     }
 
-The scan commands also just take the parameters, not the 'MATCH' and
-'COUNT' strings.
+The scan commands also just take the parameters themselves, not the
+'MATCH' and 'COUNT' strings.
 
 ## Publish/Subscribe
 
@@ -152,12 +161,20 @@ object that can read messages with .message:
         last if @m[2] eq 'QUIT';
     }
 
+NOTE: Publish/Subscribe relies on functionality not currently in the
+official [eredis
+library](https://github.com/EulerianTechnologies/eredis).  A patched
+version is temporarily
+[available](https://github.com/CurtTilmes/eredis).
+
 ## Multiple threads
 
 You can use a single `Redis::Async` object to issue requests from
 multiple threads simultaneously.  Internally each thread will get its
-own communication channel so the requests won't get mixed up. You can
-set the maximum number of readers with max-readers:
+own communication channel so the requests won't get mixed up. You
+can't, therefore issue a pipelined read request in one thread and the
+corresponding `reply` request in a different thread.  You can set the
+maximum number of readers with max-readers:
 
     $r.max-readers(50);
 
@@ -186,7 +203,7 @@ Salvatore Sanfilippo in the U.S. and other countries.
 and maintained by Guillaume Fougnies and released under the BSD
 license.
 
-This software is released under the NASA-1.3 license.  See ...
+This software is released under the NASA-1.3 license.  See [NASA Open Source Agreement](../master/NASA_Open_Source_Agreement_1.3%20GSC-17829.pdf)
 
 Copyright © 2017 United States Government as represented by the
 Administrator of the National Aeronautics and Space Administration.
