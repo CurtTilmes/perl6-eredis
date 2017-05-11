@@ -73,6 +73,51 @@ class Redis::PubSub {
     }
 }
 
+class Redis::Async {...}
+
+class Redis::List does Positional {
+    has Redis::Async $.redis;
+    has Str $.listkey;
+
+    multi method elems() { $!redis.llen($!listkey) }
+
+    multi method AT-POS($index) is rw {
+        my $listkey := $!listkey;
+        my $redis := $!redis;
+        Proxy.new(
+            FETCH => method () {
+                $redis.lindex($listkey, $index)
+            },
+            STORE => method ($new) {
+                die "Out of range" unless 0 <= $index < $redis.llen($listkey);
+                $redis.lset($listkey, $index, $new)
+            }
+        )
+    }
+
+    multi method EXISTS-POS($index) {
+        defined $!redis.lindex($!listkey, $index)
+    }
+
+    multi method DELETE-POS($index) { fail "Can't delete." }
+
+    multi method pop() { $!redis.rpop($!listkey) }
+
+    multi method push(*@values) { $!redis.rpush($!listkey, |@values); self }
+
+    multi method shift() { $!redis.lpop($!listkey) }
+
+    multi method unshift(*@values) { $!redis.lpush($!listkey, |@values); self }
+
+    multi method Str() { $!redis.lrange($!listkey, 0, -1).join(' ') }
+
+    multi method gist() {
+        my @list = $!redis.lrange($!listkey, 0, 100);
+        @list.push('...') if @list.elems >= 100;
+        '(' ~ @list.join(' ') ~ ')'
+    }
+}
+
 class Redis::Async does Associative {
     has Eredis $.eredis handles <host-add host-file retry max-readers
                                  write write-pending write-wait>;
@@ -226,5 +271,9 @@ class Redis::Async does Associative {
     method ASSIGN-KEY($key, $new) {
         self.FALLBACK('SET', $key, $new);
         $new;
+    }
+
+    method list(Str:D $key) {
+        Redis::List.new(redis => self, listkey => $key)
     }
 }
