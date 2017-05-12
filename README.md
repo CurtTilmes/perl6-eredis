@@ -165,12 +165,6 @@ object that can read messages with .message:
         last if @m[2] eq 'QUIT';
     }
 
-NOTE: Publish/Subscribe relies on functionality not currently in the
-official [eredis
-library](https://github.com/EulerianTechnologies/eredis).  A patched
-version is temporarily
-[available](https://github.com/CurtTilmes/eredis).
-
 ## Multiple threads
 
 You can use a single `Redis::Async` object to issue requests from

@@ -104,7 +104,7 @@ class Eredis::Reader is repr('CPointer') {
                                 CArray[size_t]) returns int32
         is native(LIBEREDIS) { * }
 
-    sub eredis_r_reply_blocking(Eredis::Reader) returns Eredis::Reply
+    sub eredis_r_subscribe(Eredis::Reader) returns Eredis::Reply
         is native(LIBEREDIS) { * }
 
     sub eredis_r_reply(Eredis::Reader) returns Eredis::Reply
@@ -145,8 +145,8 @@ class Eredis::Reader is repr('CPointer') {
         eredis_r_reply(self)
     }
 
-    method reply-blocking() returns Eredis::Reply {
-        eredis_r_reply_blocking(self)
+    method subscribe() returns Eredis::Reply {
+        eredis_r_subscribe(self)
     }
 
     method reply-detach() returns Eredis::Reply {

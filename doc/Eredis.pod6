@@ -178,11 +178,11 @@ C<eredis_r_reply>
 
 Retrieve reply from a pipelined request
 
-=item method B<reply-blocking>() returns Eredis::Reply
+=item method B<subscribe>() returns Eredis::Reply
 
-C<eredis_r_reply_blocking>
+C<eredis_r_subscribe>
 
-Blocking read a reply (for pub/sub)
+Read an unrequested reply (for pub/sub)
 
 =item method B<reply-detach>() returns Eredis::Reply
 

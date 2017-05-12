@@ -39,12 +39,12 @@ class Redis::PubSub {
     method new(*@args, :$reader) {
         my @arglist = @args.map({ .Str.encode });
         $reader.clear;
-        $reader.cmd(|@arglist);
+        $reader.append-cmd(|@arglist);
         self.bless(reader => $reader);
     }
 
     method message() {
-        $!reader.reply-blocking.value
+        $!reader.subscribe.value
     }
 
     method subscribe(*@channels) {
