@@ -2,7 +2,7 @@ use v6;
 
 use Eredis;
 
-class Redis::Cursor {
+class Redis::Cursor does Iterator {
     has $.redis;
     has @.command;
     has @.args;
@@ -10,6 +10,10 @@ class Redis::Cursor {
 
     has $.cursor;
     has @.values;
+
+    method pull-one() {
+        self.next orelse IterationEnd;
+    }
 
     method next() {
         while not @!values {
@@ -75,46 +79,69 @@ class Redis::PubSub {
 
 class Redis::Async {...}
 
-class Redis::List does Positional {
+class Redis::List does Positional  {
     has Redis::Async $.redis;
-    has Str $.listkey;
+    has Str $.key;
 
-    multi method elems() { $!redis.llen($!listkey) }
+    method elems() { $!redis.llen($!key) }
 
-    multi method AT-POS($index) is rw {
-        my $listkey := $!listkey;
+    method AT-POS($index) is rw {
+        my $key := $!key;
         my $redis := $!redis;
         Proxy.new(
             FETCH => method () {
-                $redis.lindex($listkey, $index)
+                $redis.lindex($key, $index)
             },
             STORE => method ($new) {
-                die "Out of range" unless 0 <= $index < $redis.llen($listkey);
-                $redis.lset($listkey, $index, $new)
+                die "Out of range" unless 0 <= $index < $redis.llen($key);
+                $redis.lset($key, $index, $new)
             }
         )
     }
 
-    multi method EXISTS-POS($index) {
-        defined $!redis.lindex($!listkey, $index)
+    method EXISTS-POS($index) {
+        defined $!redis.lindex($!key, $index)
     }
 
-    multi method DELETE-POS($index) { fail "Can't delete." }
+    method DELETE-POS($index) { fail "Can't delete." }
 
-    multi method pop() { $!redis.rpop($!listkey) }
+    method pop() { $!redis.rpop($!key) }
 
-    multi method push(*@values) { $!redis.rpush($!listkey, |@values); self }
+    method push(*@values) { $!redis.rpush($!key, |@values); self }
 
-    multi method shift() { $!redis.lpop($!listkey) }
+    method shift() { $!redis.lpop($!key) }
 
-    multi method unshift(*@values) { $!redis.lpush($!listkey, |@values); self }
+    method unshift(*@values) { $!redis.lpush($!key, |@values); self }
 
-    multi method Str() { $!redis.lrange($!listkey, 0, -1).join(' ') }
+    multi method Str() { $!redis.lrange($!key, 0, -1).join(' ') }
 
     multi method gist() {
-        my @list = $!redis.lrange($!listkey, 0, 100);
+        my @list = $!redis.lrange($!key, 0, 100);
         @list.push('...') if @list.elems >= 100;
         '(' ~ @list.join(' ') ~ ')'
+    }
+}
+
+class Redis::Hash does Associative {
+    has Redis::Async $.redis;
+    has Str $.key;
+
+    method AT-KEY($field) {
+        $!redis.FALLBACK('HGET', $!key, $field);
+    }
+
+    method EXISTS-KEY($field) {
+        $!redis.FALLBACK('HEXISTS', $!key, $field).Bool;
+    }
+
+    method DELETE-KEY($field) {
+        LEAVE $!redis.FALLBACK('HDEL', $!key, $field);
+        $!redis.FALLBACK('HGET', $!key, $field);
+    }
+
+    method ASSIGN-KEY($field, $new) {
+        $!redis.FALLBACK('HSET', $!key, $field, $new);
+        $new;
     }
 }
 
@@ -174,7 +201,7 @@ class Redis::Async does Associative {
 
     method append(|c) { self.FALLBACK('APPEND', |c) }  # override Any.append
 
-    method keys(|c)   { self.FALLBACK('KEYS', |c) }    # override Any.keys
+    method keys(Str $pattern = '*') { self.FALLBACK('KEYS', $pattern) }
 
     method hgetall(|c) { %(self.FALLBACK('HGETALL', |c)) } # Return Hash
 
@@ -274,6 +301,10 @@ class Redis::Async does Associative {
     }
 
     method list(Str:D $key) {
-        Redis::List.new(redis => self, listkey => $key)
+        Redis::List.new(redis => self, key => $key)
+    }
+
+    method hash(Str:D $key) {
+        Redis::Hash.new(redis => self, key => $key);
     }
 }
