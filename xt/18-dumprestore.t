@@ -25,6 +25,6 @@ is $r.restore('mykey', 0, $val), 'OK', 'Restored ok';
 is $r.get('mykey'), 10, 'Restored value';
 
 throws-like { $r.restore('mykey', 0, $val) }, X::Eredis,
-    message => 'ERR Target key name is busy.';
+    message => rx:s/Target key name/;
 
 done-testing;
