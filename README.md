@@ -190,7 +190,7 @@ EXPERIMENTAL, not everything works yet
 
 You can bind an array to a Redis List like this:
 
-    my @list = $r.list('some-list-key');
+    my @list := $r.list('some-list-key');
     @list.push(1,2,3);
     say @list[1]; # 2
 
