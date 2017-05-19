@@ -103,6 +103,8 @@ class Redis::Async does Associative {
             $eredis.host-add($host, $port.Int);
         }
 
+        $eredis.host-add('localhost', 6379) unless $host-file || @servers;
+
         start $eredis.run-thr;
 
         nextwith(:$eredis);
