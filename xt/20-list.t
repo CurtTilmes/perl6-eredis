@@ -2,17 +2,18 @@ use v6;
 use Test;
 use Test::Redis;
 use Redis::Async;
+use Redis::Objects;
 
 plan 8;
 
 my $port = 16379;
 
-my $redis will leave { .finish } = Test::Redis.new(:$port);
-$redis.start;
+my $redis-server will leave { .finish } = Test::Redis.new(:$port);
+$redis-server.start;
 
-my $r = Redis::Async.new("localhost:$port");
+my $redis = Redis::Async.new("localhost:$port");
 
-my @list := $r.list('mylist');
+my @list := Redis::List.new(:$redis, key => 'mylist');
 
 ok @list, 'Make a list';
 

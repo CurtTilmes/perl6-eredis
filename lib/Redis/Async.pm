@@ -77,74 +77,6 @@ class Redis::PubSub {
     }
 }
 
-class Redis::Async {...}
-
-class Redis::List does Positional  {
-    has Redis::Async $.redis;
-    has Str $.key;
-
-    method elems() { $!redis.llen($!key) }
-
-    method AT-POS($index) is rw {
-        my $key := $!key;
-        my $redis := $!redis;
-        Proxy.new(
-            FETCH => method () {
-                $redis.lindex($key, $index)
-            },
-            STORE => method ($new) {
-                die "Out of range" unless 0 <= $index < $redis.llen($key);
-                $redis.lset($key, $index, $new)
-            }
-        )
-    }
-
-    method EXISTS-POS($index) {
-        defined $!redis.lindex($!key, $index)
-    }
-
-    method DELETE-POS($index) { fail "Can't delete." }
-
-    method pop() { $!redis.rpop($!key) }
-
-    method push(*@values) { $!redis.rpush($!key, |@values); self }
-
-    method shift() { $!redis.lpop($!key) }
-
-    method unshift(*@values) { $!redis.lpush($!key, |@values); self }
-
-    multi method Str() { $!redis.lrange($!key, 0, -1).join(' ') }
-
-    multi method gist() {
-        my @list = $!redis.lrange($!key, 0, 100);
-        @list.push('...') if @list.elems >= 100;
-        '(' ~ @list.join(' ') ~ ')'
-    }
-}
-
-class Redis::Hash does Associative {
-    has Redis::Async $.redis;
-    has Str $.key;
-
-    method AT-KEY($field) {
-        $!redis.FALLBACK('HGET', $!key, $field);
-    }
-
-    method EXISTS-KEY($field) {
-        $!redis.FALLBACK('HEXISTS', $!key, $field).Bool;
-    }
-
-    method DELETE-KEY($field) {
-        LEAVE $!redis.FALLBACK('HDEL', $!key, $field);
-        $!redis.FALLBACK('HGET', $!key, $field);
-    }
-
-    method ASSIGN-KEY($field, $new) {
-        $!redis.FALLBACK('HSET', $!key, $field, $new);
-        $new;
-    }
-}
-
 class Redis::Async does Associative {
     has Eredis $.eredis handles <host-add host-file retry max-readers
                                  write write-pending write-wait>;
@@ -298,13 +230,5 @@ class Redis::Async does Associative {
     method ASSIGN-KEY($key, $new) {
         self.FALLBACK('SET', $key, $new);
         $new;
-    }
-
-    method list(Str:D $key) {
-        Redis::List.new(redis => self, key => $key)
-    }
-
-    method hash(Str:D $key) {
-        Redis::Hash.new(redis => self, key => $key);
     }
 }

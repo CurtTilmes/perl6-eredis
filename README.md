@@ -184,21 +184,37 @@ max-readers option to new():
 
     $r = Redis::Async.new('localhost:6379', max-readers => 50);
 
-## Perlish objects
+## `Redis::Objects` Perlish objects tied to Redis Objects
 
-EXPERIMENTAL, not everything works yet
+*EXPERIMENTAL, not everything works yet*
 
-You can bind an array to a Redis List like this:
+You can bind to a Redis List like this:
 
-    my @list := $r.list('some-list-key');
+    use Redis::Async;
+    use Redis::Objects;
+
+    my $redis = Redis::Async.new('localhost:6379');
+
+    my @list := Redis::List.new(:$redis, key => 'some-list-key');
     @list.push(1,2,3);
-    say @list[1]; # 2
+    say @list[1];        # 2
+    .say for @list;
+
+`push()` acts more like `append()` in that it flattens arrays since
+you can't really store objects in Redis (though maybe in the future
+this will serialize objects for you...)
 
 or a Redis Hash like this:
 
-    my %hash := $r.hash('some-hash-key');
+    my %hash := Redis::Hash.new(:$redis, key => 'some-hash-key');
     %hash<a> = 'something';
-    say %hash<a>; # something
+    say %hash<a>;              # something
+    .say for %hash;            # pairs
+
+    say %hash.kv;
+    say %hash.keys;
+    say %hash.values;
+    say %hash.elems;
 
 ## Transactions
 

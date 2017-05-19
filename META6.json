@@ -5,18 +5,19 @@
 
     "auth" : "github:CurtTilmes",
 
-    "version" : "0.5",
+    "version" : "0.6",
 
     "source-url" : "https://github.com/CurtTilmes/perl6-eredis.git",
 
     "perl" : "6.c",
-    
+
     "tags" : [ "Redis" ],
 
     "provides" : {
-        "Eredis"       : "lib/Eredis.pm",
-        "Redis::Async" : "lib/Redis/Async.pm",
-        "Test::Redis"  : "lib/Test/Redis.pm"
+        "Eredis"         : "lib/Eredis.pm",
+        "Redis::Async"   : "lib/Redis/Async.pm",
+        "Redis::Objects" : "lib/Redis/Objects.pm6",
+        "Test::Redis"    : "lib/Test/Redis.pm"
     },
 
     "depends" : [ "NativeCall" ],
@@ -27,7 +28,7 @@
 
     "authors" : [ "Curt Tilmes <Curt.Tilmes@nasa.gov>" ],
 
-    "support" : { 
+    "support" : {
       "source" : "https://github.com/CurtTilmes/perl6-eredis.git",
       "bugtracker" : "https://github.com/CurtTilmes/Perl6-GraphQL/issues"
     }

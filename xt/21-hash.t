@@ -2,17 +2,18 @@ use v6;
 use Test;
 use Test::Redis;
 use Redis::Async;
+use Redis::Objects;
 
 plan 6;
 
 my $port = 16379;
 
-my $redis will leave { .finish } = Test::Redis.new(:$port);
-$redis.start;
+my $redis-server will leave { .finish } = Test::Redis.new(:$port);
+$redis-server.start;
 
-my $r = Redis::Async.new("localhost:$port");
+my $redis = Redis::Async.new("localhost:$port");
 
-my %hash := $r.hash('myhash');
+my %hash := Redis::Hash.new(:$redis, key => 'myhash');
 
 ok %hash, 'Make a hash';
 
@@ -20,7 +21,7 @@ ok %hash, 'Make a hash';
 
 is %hash<a>, 'something', 'Set';
 
-is $r.hgetall('myhash'), { a => 'something' }, 'Double check';
+is $redis.hgetall('myhash'), { a => 'something' }, 'Double check';
 
 is %hash<a>:delete, 'something', 'Deleting';
 
