@@ -152,3 +152,29 @@ class Redis::Set does Iterable {
     method grab($count = 1) { $count == 1 ?? $!redis.spop($!key)
                                           !! $!redis.spop($!key, $count) }
 }
+
+multi sub infix:<(elem)>(Cool:D $a, Redis::Set:D $b --> Bool:D) is export
+{
+    $b.redis.sismember($b.key, $a).Bool
+}
+
+sub infix:<∈>(Cool:D $a, Redis::Set:D $b --> Bool:D) is export {
+    $a (elem) $b;
+}
+
+sub infix:<∉>(Cool:D $a, Redis::Set:D $b --> Bool:D) is export {
+    $a !(elem) $b;
+}
+
+multi sub infix:<(cont)>(Redis::Set:D $b, Cool:D $a --> Bool:D) is export
+{
+    $a.redis.sismember($a.key, $b).Bool
+}
+
+sub infix:<∋>(Redis::Set:D $a, Cool:D $b --> Bool:D) is export {
+    $a (cont) $b;
+}
+
+sub infix:<∌>(Redis::Set:D $a, Cool:D $b --> Bool:D) is export {
+    $a !(cont) $b;
+}
